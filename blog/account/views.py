@@ -18,20 +18,20 @@ class UserListView(generics.ListAPIView):
 
 @api_view(["POST"])
 def UserSignUpView(request):
-    serlizer = SignUpSerializers(data=request.data)
+    serializer = SignUpSerializers(data=request.data)
 
-    if serlizer.is_valid():
-        username = serlizer.validated_data.get("username")
-        email = serlizer.validated_data.get("email")
-        password = serlizer.validated_data.get("password")
+    if serializer.is_valid():
+        username = serializer.validated_data.get("username")
+        email = serializer.validated_data.get("email")
+        password = serializer.validated_data.get("password")
 
-        User = serlizer.save()
+        User = serializer.save()
         User.set_password(password)
         User.save()
 
-        return Response(serlizer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    return Response(serlizer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class UserSignupView(generics.CreateAPIView):
