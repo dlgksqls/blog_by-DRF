@@ -78,8 +78,12 @@ WSGI_APPLICATION = "blog.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.mysql",  # mysqlclient library 설치
+        "NAME": "blog",
+        "USER": "hanbin",
+        "PASSWORD": "dlgksqls11!",  # MariaDB 설치 시 입력한 root 비밀번호 입력
+        "HOST": "svc.sel5.cloudtype.app",
+        "PORT": "32177",
     }
 }
 
