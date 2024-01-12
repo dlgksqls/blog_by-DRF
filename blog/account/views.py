@@ -5,10 +5,11 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework.authentication import authenticate
 from django.http import Http404
 import jwt
+from blog.settings import SECRET_KEY
 
 from .serializers import UserModelSerializers, SignUpSerializers
 from .models import User
@@ -124,15 +125,42 @@ def UserLogInView(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-def UserDetailView(request, username): 
-    try:
-        user = get_object_or_404(User, username=username)
-    except Http404:
-        return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+def UserDetailView(request): 
+    # user = get_object_or_404(User, username=username)
+    # if request.method == "GET":  # 유저 정보
+    #     serializer = UserModelSerializers(user)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
-    if request.method == "GET":  # 유저 정보
-        serializer = UserModelSerializers(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    if request.method == "GET":
+        try:
+            # access token을 decode 해서 유저 id 추출 => 유저 식별
+            access = request.COOKIES['access']
+            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+            pk = payload.get('user_id')
+            user = get_object_or_404(User, pk=pk)
+            serializer = UserModelSerializers(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except(jwt.exceptions.ExpiredSignatureError):
+            # 토큰 만료 시 토큰 갱신
+            data = {'refresh': request.COOKIES.get('refresh', None)}
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                access = serializer.data.get('access', None)
+                refresh = serializer.data.get('refresh', None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
+                pk = payload.get('user_id')
+                user = get_object_or_404(User, pk=pk)
+                serializer = UserModelSerializers(instance=user)
+                res = Response(serializer.data, status=status.HTTP_200_OK)
+                res.set_cookie('access', access)
+                res.set_cookie('refresh', refresh)
+                return res
+            raise jwt.exceptions.InvalidTokenError
+
+        except(jwt.exceptions.InvalidTokenError):
+            # 사용 불가능한 토큰일 때
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == "PATCH":  # 유저 수정
         serializer = UserModelSerializers(user, data=request.data, partial=True)

@@ -4,16 +4,25 @@ from rest_framework import serializers
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework.authentication import TokenAuthentication
 
+from core.permission import IsOwnerOnly
 from .models import Post, Comment
 from .serializers import PostModelSerializers, CommentModelSerializers
+from blog.settings import SECRET_KEY
 
 # Create your views here.
 
 
 class PostListView(generics.ListAPIView):
-    queryset = Post.objects.all()
+    permission_classes = [IsOwnerOnly]
     serializer_class = PostModelSerializers
+
+    def get_queryset(self):
+        writer = self.request.user
+        return Post.objects.filter(writer=writer)
 
 
 @api_view(["GET", "PATCH", "DELETE"])
