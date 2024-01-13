@@ -5,7 +5,10 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
 from rest_framework.authentication import authenticate
 from django.http import Http404
 import jwt
@@ -43,10 +46,7 @@ def UserSignUpView(request):
             {
                 "user": serializer.data,
                 "message": "register.success",
-                "token":{
-                    "access": access_token,
-                    "refresh": refresh_token
-                },
+                "token": {"access": access_token, "refresh": refresh_token},
             },
             status=status.HTTP_200_OK,
         )
@@ -56,17 +56,17 @@ def UserSignUpView(request):
         res.set_cookie("refresh", refresh_token, httponly=True)
 
         return res
-        #return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["POST"])
 def UserLogInView(request):
     user = authenticate(
-        username = request.data.get("username"),
-        password = request.data.get("password")
+        username=request.data.get("username"), password=request.data.get("password")
     )
-    
+
     if user is not None:
         serializer = UserModelSerializers(user)
         token = TokenObtainPairSerializer.get_token(user)
@@ -76,7 +76,7 @@ def UserLogInView(request):
             {
                 "user": serializer.data,
                 "message": "login success",
-                "token":{
+                "token": {
                     "access": access_token,
                     "refresh": refresh_token,
                 },
@@ -88,7 +88,6 @@ def UserLogInView(request):
         return res
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
-
 
 
 # class UserSignupView(generics.CreateAPIView):
@@ -125,7 +124,7 @@ def UserLogInView(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-def UserDetailView(request): 
+def UserDetailView(request):
     # user = get_object_or_404(User, username=username)
     # if request.method == "GET":  # 유저 정보
     #     serializer = UserModelSerializers(user)
@@ -134,31 +133,31 @@ def UserDetailView(request):
     if request.method == "GET":
         try:
             # access token을 decode 해서 유저 id 추출 => 유저 식별
-            access = request.COOKIES['access']
-            payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-            pk = payload.get('user_id')
+            access = request.COOKIES["access"]
+            payload = jwt.decode(access, SECRET_KEY, algorithms=["HS256"])
+            pk = payload.get("user_id")
             user = get_object_or_404(User, pk=pk)
             serializer = UserModelSerializers(instance=user)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        except(jwt.exceptions.ExpiredSignatureError):
+        except jwt.exceptions.ExpiredSignatureError:
             # 토큰 만료 시 토큰 갱신
-            data = {'refresh': request.COOKIES.get('refresh', None)}
+            data = {"refresh": request.COOKIES.get("refresh", None)}
             serializer = TokenRefreshSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get('access', None)
-                refresh = serializer.data.get('refresh', None)
-                payload = jwt.decode(access, SECRET_KEY, algorithms=['HS256'])
-                pk = payload.get('user_id')
+                access = serializer.data.get("access", None)
+                refresh = serializer.data.get("refresh", None)
+                payload = jwt.decode(access, SECRET_KEY, algorithms=["HS256"])
+                pk = payload.get("user_id")
                 user = get_object_or_404(User, pk=pk)
                 serializer = UserModelSerializers(instance=user)
                 res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie('access', access)
-                res.set_cookie('refresh', refresh)
+                res.set_cookie("access", access)
+                res.set_cookie("refresh", refresh)
                 return res
             raise jwt.exceptions.InvalidTokenError
 
-        except(jwt.exceptions.InvalidTokenError):
+        except jwt.exceptions.InvalidTokenError:
             # 사용 불가능한 토큰일 때
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
